@@ -1,0 +1,8 @@
+{
+  "enabled": true,
+  "cooldownMs": 2000,
+  "maxConsecutive": 2,
+  "continueText": "上一回合因临时性错误中断。请从中断处继续完成任务。",
+  "retryableErrorPatterns": "",
+  "permanentErrorPatterns": ""
+}
