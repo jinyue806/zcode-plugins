@@ -31,6 +31,29 @@
         "auto-continue",
         "reliability"
       ]
+    },
+    {
+      "name": "zcode-ops",
+      "source": "./plugins/zcode-ops",
+      "displayName": "ZCode Ops",
+      "description": "Literal (non-regex) find & replace across an explicit list of files. dry_run defaults to true; writes are atomic; UTF-8 BOM and CRLF/LF preserved byte-for-byte; binary/non-UTF-8/oversized/missing files skipped with explicit reasons.",
+      "description_i18n": {
+        "en": "Literal (non-regex) find & replace across an explicit list of files. dry_run defaults to true; writes are atomic; UTF-8 BOM and CRLF/LF preserved byte-for-byte; binary/non-UTF-8/oversized/missing files skipped with explicit reasons.",
+        "zh-CN": "跨文件字面（非正则）批量替换：dry_run 默认只报告不落盘；原子写；UTF-8 BOM 与 CRLF/LF 字节级保持；二进制/非 UTF-8/超大/缺失文件显式跳过并给理由。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "jinyue806"
+      },
+      "homepage": "https://github.com/jinyue806/zcode-plugins",
+      "category": "productivity",
+      "keywords": [
+        "replace",
+        "batch",
+        "mcp",
+        "ops",
+        "crlf-safe"
+      ]
     }
   ]
 }

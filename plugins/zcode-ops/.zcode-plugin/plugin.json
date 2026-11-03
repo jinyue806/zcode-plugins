@@ -1,0 +1,10 @@
+{
+  "name": "zcode-ops",
+  "version": "0.1.0",
+  "description": "Literal cross-file find & replace over MCP (ops_replace): dry-run by default, byte-exact CRLF/BOM preservation, atomic writes, explicit skips for binary/non-UTF-8/oversized/missing files.",
+  "author": {
+    "name": "jinyue806"
+  },
+  "mcpServers": ".mcp.json",
+  "skills": "./skills"
+}
