@@ -1,6 +1,6 @@
 {
   "name": "auto-continue",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Auto-continue a turn that ended in a transient error via the Stop hook; permanent errors are never retried. Failure classification ported from dsh-auto-continue (MIT).",
   "author": {
     "name": "jinyue806"

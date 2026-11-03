@@ -47,6 +47,10 @@
 node tests/run-cases.mjs   # 16/16 全分支 stdin 模拟（含 config 分层）
 ```
 
+## ⚠️ 已知边界（诚实标注）
+
+**模型 API 层错误（429 限流 / 5xx / 网络断）不会触发本插件**——这类错误使回合以 `turn.failed` 异常终止，根本走不到 Stop 钩子（Stop 只在模型正常输出收尾时触发，源码仅一处调用点）。本插件覆盖的是「模型正常说完、但结果因临时性错误不完整」的回合。API 级自动重试需要外部监督器（轮询会话状态后重新注入 prompt），超出钩子协议能力。
+
 ## License
 
 MIT。失败分类思路源自 [dsh-auto-continue](https://github.com/HsiangNianian/dsh-auto-continue)（MIT）。
