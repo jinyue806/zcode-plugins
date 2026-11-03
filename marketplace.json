@@ -1,0 +1,36 @@
+{
+  "name": "jinyue806-zcode-plugins",
+  "description": "JY 的 ZCode 插件合集（个人维护）。",
+  "description_i18n": {
+    "en": "JY's ZCode plugin collection (personal).",
+    "zh-CN": "JY 的 ZCode 插件合集（个人维护）。"
+  },
+  "owner": {
+    "name": "jinyue806",
+    "url": "https://github.com/jinyue806"
+  },
+  "plugins": [
+    {
+      "name": "auto-continue",
+      "source": "./plugins/auto-continue",
+      "displayName": "Auto Continue",
+      "description": "Auto-continue a turn that ended in a transient error (network/5xx/429/timeout) via the Stop hook; permanent errors (auth/quota/context limit) are never retried. Failure classification ported from dsh-auto-continue (MIT).",
+      "description_i18n": {
+        "en": "Auto-continue a turn that ended in a transient error (network/5xx/429/timeout) via the Stop hook; permanent errors (auth/quota/context limit) are never retried. Failure classification ported from dsh-auto-continue (MIT).",
+        "zh-CN": "回合以临时性错误（网络/5xx/429/超时）收尾时经 Stop 钩子自动续跑；永久性错误（认证/余额/上下文超限）不重试只提示。失败分类思路移植自 dsh-auto-continue (MIT)。"
+      },
+      "version": "0.1.1",
+      "author": {
+        "name": "jinyue806"
+      },
+      "homepage": "https://github.com/jinyue806/zcode-plugins",
+      "category": "productivity",
+      "keywords": [
+        "hooks",
+        "stop",
+        "auto-continue",
+        "reliability"
+      ]
+    }
+  ]
+}

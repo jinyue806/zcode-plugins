@@ -26,13 +26,14 @@ jinyue806/zcode-plugins
 
 | 插件 | 说明 |
 |:--|:--|
-| [auto-continue](./auto-continue/) | 回合以临时性错误（网络/5xx/429/超时）收尾时经 Stop 钩子自动续跑；永久性错误（认证/余额/上下文超限）不重试只提示。单会话最多续 2 次（ZCode 硬上限 3），带冷却与同文本循环护栏。失败分类思路移植自 [dsh-auto-continue](https://github.com/HsiangNianian/dsh-auto-continue)（MIT）。 |
+| [auto-continue](./plugins/auto-continue/) | 回合以临时性错误（网络/5xx/429/超时）收尾时经 Stop 钩子自动续跑；永久性错误（认证/余额/上下文超限）不重试只提示。单会话最多续 2 次（ZCode 硬上限 3），带冷却与同文本循环护栏。失败分类思路移植自 [dsh-auto-continue](https://github.com/HsiangNianian/dsh-auto-continue)（MIT）。 |
 
-## 结构
+## 结构（对齐官方 distribution 布局）
 
 ```
-.claude-plugin/marketplace.json   # marketplace 清单（Discover 探测点）
-auto-continue/                    # 插件本体（.zcode-plugin/plugin.json）
+marketplace.json          # marketplace 清单（仓库根）
+plugins/
+└── auto-continue/        # 插件本体（.zcode-plugin/plugin.json，hooks/hooks.json 自动发现）
 ```
 
 ## License

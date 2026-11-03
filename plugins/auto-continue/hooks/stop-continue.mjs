@@ -1,14 +1,18 @@
 // stop-continue.mjs — auto-continue 插件 Stop 钩子引擎
-// 移植自 dsh-auto-continue（MIT, HsiangNianian）的失败分类思路；ZCode Stop 协议细节见记忆 zcode-auto-continue-port-plan
-// 输出协议（源码钉死）：{continue:true, additionalContext} 且 additionalContext 非空才续跑；ZCode 硬上限 3 次
+// 移植自 dsh-auto-continue（MIT, HsiangNianian）的失败分类思路
+// Stop 输出协议（官方 PLUGIN_DEVELOPMENT §4）：规范形 {"decision":"block","reason"} 续跑一轮；
+//   exit 2 = blocking 捷径；ZCode 硬上限连续 3 轮
 // stdin: {session_id, last_assistant_message, stop_hook_active, transcript_path, cwd, hook_event_name}
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const CONFIG_PATH = path.join(__dirname, 'config.json');
-const STATE_DIR = process.env.ZCODE_PLUGIN_DATA || path.join(__dirname, 'state');
+// 配置分层：ZCODE_PLUGIN_DATA（用户配置，跨更新持久）> 插件目录 config.json（出厂默认，随更新被覆盖）
+const DATA_DIR = process.env.ZCODE_PLUGIN_DATA || path.join(__dirname, 'state');
+const USER_CONFIG_PATH = path.join(DATA_DIR, 'config.json');
+const FACTORY_CONFIG_PATH = path.join(__dirname, 'config.json');
+const STATE_DIR = DATA_DIR;
 
 const DEFAULTS = {
   enabled: true,
@@ -27,8 +31,10 @@ function readJson(p, fallback) {
 }
 
 function loadConfig() {
-  const file = readJson(CONFIG_PATH, {});
-  return { ...DEFAULTS, ...file };
+  // 用户配置（DATA_DIR）整层覆盖出厂默认；config.json 缺失时回落插件目录出厂值
+  const factory = readJson(FACTORY_CONFIG_PATH, {});
+  const user = readJson(USER_CONFIG_PATH, {});
+  return { ...DEFAULTS, ...factory, ...user };
 }
 
 // ---- 状态：每会话 {count, lastAt, lastText}，文件落 ZCODE_PLUGIN_DATA ----
@@ -158,10 +164,10 @@ function main() {
 
   if (d.action === 'continue') {
     saveState(input.session_id || 'unknown', d.next, now);
+    // 官方规范形：decision:"block" + reason 续跑一轮（continue:true 是 legacy）
     process.stdout.write(JSON.stringify({
-      continue: true,
-      additionalContext: d.text,
-      stopReason: 'auto-continue: transient failure'
+      decision: 'block',
+      reason: d.text
     }));
     return;
   }

@@ -32,18 +32,19 @@
 ```
 
 - `retryableErrorPatterns` / `permanentErrorPatterns`：每行一条子串 pattern，命中强制归为临时/永久（用户 pattern 优先级最高）
-- 运行态与崩溃日志在 `hooks/state/`（按会话隔离，7 天自动清理）
+- **配置分层**：`hooks/config.json` 是出厂默认（随插件更新被覆盖）；把改好的 config 放到插件数据目录（`${ZCODE_PLUGIN_DATA}/config.json`）即用户配置，跨更新持久、优先级最高
+- 运行态与崩溃日志在数据目录（按会话隔离，7 天自动清理）
 
-## 协议细节（ZCode 源码钉死）
+## 协议细节
 
-- Stop 钩子输出 `{continue:true, additionalContext:"..."}` 且 additionalContext **非空**才真续（`stopShouldContinue && additionalContexts.length>0 && count<3`）
+- Stop 钩子输出规范形 `{"decision":"block","reason":"..."}` 续跑一轮（`reason` 注入消息历史；`continue:true` 为 legacy 兼容形，本插件已迁规范形）
 - ZCode 连续续跑硬上限 **3 次**（硬编码），本插件默认 `maxConsecutive: 2` 自我收敛
 - ZCode 的 Stop 钩子对**正常完成回合也触发**（无 DSH 的 `turn/end reason` 信号），故判据为「默认放行 + 命中显式 error 签名才分类」
 
 ## 测试
 
 ```bash
-node tests/run-cases.mjs   # 15/15 全分支 stdin 模拟
+node tests/run-cases.mjs   # 16/16 全分支 stdin 模拟（含 config 分层）
 ```
 
 ## License

@@ -1,6 +1,0 @@
-{
-  "name": "auto-continue",
-  "version": "0.1.0",
-  "description": "回合以临时性错误收尾时经 Stop 钩子自动续跑；永久性错误（认证/配额/上下文超限）不重试只放行。移植自 dsh-auto-continue 的失败分类思路。",
-  "hooks": "hooks/hooks.json"
-}
