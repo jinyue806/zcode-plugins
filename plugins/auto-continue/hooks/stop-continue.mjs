@@ -92,42 +92,68 @@ const ERROR_SIGNATURES = [
   /网络/, /连接中断/, /请求失败/, /重试后仍失败/
 ];
 
-// P0（2026-11-04）：文本嗅探双向失灵的修正 —— 分析错误机制的文本天然命中签名造成误续（实证 2 次）。
-// ① 结尾是问句/提案（agent 在等用户拍板）→ 绝不续；② 错误签名只认文本头部区域（harness 注入的错误在头部，分析文本的签名散布全文）。
-// 词边界版问句豁免：行尾（允许尾随空白/引号/括号）以疑问标点或「吗/呢/吧+？」收尾
-const QUESTION_TAIL = /([?？]\s*['"）)】\]]*|(吗|呢|吧)[?？]?)\s*$/;
+// P0（2026-11-04）+ P1 审查修正（2026-11-05 独立审查 9 条发现，全量复验后落地，方向 B 模拟 21 用例全过）：
+// 文本嗅探双向失灵的修正 —— 分析错误机制的文本天然命中软签名造成误续。
+// 设计：「硬锚点」才算错误 —— 头部硬前缀 / 硬状态码单行 / 硬错误短语 / 用户 retryable 配置；
+//        软签名（error/timeout/429 等散布词）不再单独构成续跑理由（分析文本必命中）。
+// 问句/提案结尾（等用户拍板）：先剥 markdown/代码块/尾注噪声再判；硬锚存在时仍按错误处理（「Error: … 是否重试？」必须续）。
+// 已知残留：「错误：…」开头的分析文本（中文冒号锚）会误续 —— 审查实证中未出现该形态，宁漏勿滥，见 T22 注释。
+const HEAD_WINDOW = 200;
 
-function endsWithQuestion(text) {
-  const t = String(text || '').trimEnd();
-  if (!t) return false;
-  return QUESTION_TAIL.test(t);
-}
-
-// 签名命中位置约束：只认首行（harness 注入的错误自成一行；分析文本把签名写进正文段落）
 function headRegion(text) {
   const t = String(text || '');
-  const firstNl = t.indexOf('\n');
-  return firstNl === -1 ? t : t.slice(0, firstNl);
+  const lines = t.split('\n').slice(0, 2).join('\n');
+  return lines.slice(0, HEAD_WINDOW);
 }
+
+// 剥掉行尾的 markdown 强调/引用/括号/破折号尾注等噪声，露出真正的结尾标点
+function stripTailNoise(text) {
+  let t = String(text || '').trimEnd();
+  // fenced code block 结尾：剥到闭合栅栏前一行
+  const fence = t.match(/\n```[\s\S]*$/);
+  if (fence) t = t.slice(0, fence.index).trimEnd();
+  // 破折号/括号尾注：「要我改吗？——等你回复」「要我改吗？（请确认）」
+  t = t.replace(/[（(][^（()）]*[)）]\s*$/, '').trimEnd();
+  t = t.replace(/[—–-]{2}[^\n]*$/, '').trimEnd();
+  // markdown 强调/引用/链接收尾符号
+  t = t.replace(/[*_`~]+/g, '').replace(/[[\]()（）「」『』【】'"'""<>》\s]+$/, '').trimEnd();
+  return t;
+}
+
+const QUESTION_TAIL = /[?？]$/;
+const PROPOSAL_TAIL = /(吗|呢|吧)$/;
+// 无标点的拍板请求（agent 高频收尾形态）
+const ASK_PHRASE = /(请确认|是否继续|是否重试|要不要|需要我|要我|should i|shall i|proceed\?*)$/i;
+
+function endsWithQuestion(text) {
+  const t = stripTailNoise(text);
+  if (!t) return false;
+  return QUESTION_TAIL.test(t) || PROPOSAL_TAIL.test(t) || ASK_PHRASE.test(t);
+}
+
+// 硬锚点（命中即错误信号，无视软签名与问句尾）：
+//  ① 头部硬前缀：Error: / 错误：/ 重试后仍失败 / 请求失败 / 连接中断（「错误」后必须跟标点，否则「错误机制分析」误锚）
+//  ② 硬状态码单行：head 整体形如「403 Forbidden」「Error: 502」
+//  ③ 硬错误短语：fetch failed / 重试后仍失败 / 429 Too Many / insufficient balance 等（兜底不在行首的错误文案）
+const HARD_HEAD_PREFIX = /^(?:Error\b|错误[:：，]|重试后仍失败|请求失败|连接中断|\[Error)/i;
+const STATUS_LINE = /^\s*(?:Error[:：]\s*)?(?:[45]\d{2})\b[\s\S]{0,40}$/;
+const HARD_PHRASE = /(fetch failed|重试后仍失败|连接中断|请求失败|429 Too Many|insufficient.*(balance|quota)|prompt is too long|context length exceed)/i;
 
 function classify(text, cfg) {
   const hay = String(text || '');
-  const has = (patterns) => patterns.split(/\r?\n/).map(s => s.trim()).filter(Boolean).some(p => hay.toLowerCase().includes(p.toLowerCase()));
-
-  // 用户显式永久 pattern 优先——命中绝不续
-  if (has(cfg.permanentErrorPatterns)) return 'permanent';
-
-  // P0-①：问句/提案结尾 = 等用户拍板，绝不续（无论中间命中什么签名）
-  if (endsWithQuestion(hay)) return 'clean';
-
-  // 无 error 签名 = 正常完成 → 放行（这是修正后的核心判据）
-  // P0-②：签名只认头部区域，正文散布的技术词不误伤
   const head = headRegion(hay);
-  const hasErrorSig = ERROR_SIGNATURES.some(re => re.test(head)) || has(cfg.retryableErrorPatterns);
+  const hasIn = (patterns, region) => patterns.split(/\r?\n/).map(s => s.trim()).filter(Boolean).some(p => region.toLowerCase().includes(p.toLowerCase()));
+
+  // 用户显式永久 pattern 优先——命中绝不续（用户配置=显式意图，保持全文视野）
+  if (hasIn(cfg.permanentErrorPatterns, hay)) return 'permanent';
+
+  const hasErrorSig = HARD_HEAD_PREFIX.test(head) || STATUS_LINE.test(head) || HARD_PHRASE.test(head) || hasIn(cfg.retryableErrorPatterns, head);
+
   if (!hasErrorSig) return 'clean';
 
   // 命中 error 签名后再分永久/临时：认证/余额/上下文类重试无意义
-  const lower = hay.toLowerCase();
+  // 视野统一收窄到 head（与签名门控同区域），避免「门控看首行、判定看全文」的混合语义
+  const lower = head.toLowerCase();
   const status = /(?:^|\D)(40[13])(?:\D|$)/.exec(lower);   // 只裁 401/403；429 不落入（42[39] 会误吞 429）
   if (status) return 'permanent';
   const permanent =
@@ -153,7 +179,7 @@ function decide(input, cfg, now) {
   if (!text.trim()) return { action: 'pass' };
 
   const verdict = classify(text, cfg);
-  if (verdict === 'clean') return { action: 'pass', note: 'clean' };
+  if (verdict === 'clean') return { action: 'pass', note: 'clean', resetCount: true };
   if (verdict === 'permanent') {
     return { action: 'pass', note: 'permanent' };
   }
@@ -193,6 +219,10 @@ function main() {
       reason: d.text
     }));
     return;
+  }
+  // clean 轮 = 会话正常推进，续跑配额恢复（否则误续 2 次后 10 分钟内真实错误也不续）
+  if (d.action === 'pass' && d.resetCount) {
+    saveState(input.session_id || 'unknown', { count: 0, lastAt: 0, lastText: '' }, now);
   }
   if (d.action === 'pass' && d.note === 'permanent') {
     // 永久性错误不续，但给会话留一句说明（顶层 additionalContext，不触发续跑）

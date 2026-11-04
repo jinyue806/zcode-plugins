@@ -36,6 +36,18 @@ const CASES = [
   { name: 'T18 长分析文本签名散布正文→不续', input: HOOK('s18', '结论如下。\n\n' + '错误机制分析：error、failed、timeout、ECONNRESET、429、5xx、网络中断、重试后仍失败。'.repeat(5)), want: c => c.decision === undefined && c.additionalContext === undefined },
   { name: 'T19 头部真实错误→仍续跑', input: HOOK('s19', 'Error: fetch failed: socket hang up\n（后续为正常分析文本）' + '已完成排查，共修改 3 个文件。'.repeat(10)), want: c => c.decision === 'block' && c.reason && c.reason.length > 0 },
   { name: 'T20 英文问句结尾→不续', input: HOOK('s20', 'The failure was caused by timeout and error 502. Should I proceed with the patch?'), want: c => c.decision === undefined && c.additionalContext === undefined },
+  // T21-T30 P1 审查修复回归（2026-11-05）：判据统一头部窗口 + 问句豁免加前置 + markdown 噪声剥离 + clean 重置配额
+  { name: 'T21 首行带签名的分析文本→不续', input: HOOK('s21', '断流根因是 timeout 和 ECONNRESET，429 也会触发。\n\n逐条说明：首先网关层……'), want: c => c.decision === undefined && c.additionalContext === undefined },
+  { name: 'T22 单行分析文本(无问句)→不续', input: HOOK('s22', '错误机制分析：error、failed、timeout、ECONNRESET、429、5xx 都会命中签名。以下是逐条说明。'), want: c => c.decision === undefined && c.additionalContext === undefined },
+  { name: 'T23 真实错误+问句结尾→仍续跑', input: HOOK('s23', 'Error: fetch failed. 是否重试？'), want: c => c.decision === 'block' && c.reason && c.reason.length > 0 },
+  { name: 'T24 中文错误兜底文案+问句→仍续跑', input: HOOK('s24', '重试后仍失败，请检查网络连接，是否重试？'), want: c => c.decision === 'block' && c.reason && c.reason.length > 0 },
+  { name: 'T25 首行叙述+次行错误→续跑', input: HOOK('s25', '任务中断了。\nError: fetch failed: ECONNRESET'), want: c => c.decision === 'block' && c.reason && c.reason.length > 0 },
+  { name: 'T26 markdown 粗体问句尾→不续', input: HOOK('s26', '分析完了，三个方案各有取舍。**要我落地补丁吗？**'), want: c => c.decision === undefined && c.additionalContext === undefined },
+  { name: 'T27 问句+代码块结尾→不续', input: HOOK('s27', '方案如上。要我改吗？\n```bash\nls -la\n```'), want: c => c.decision === undefined && c.additionalContext === undefined },
+  { name: 'T28 破折号尾注问句→不续', input: HOOK('s28', '分析完成。要我改吗？——等你回复'), want: c => c.decision === undefined && c.additionalContext === undefined },
+  { name: 'T29 retryable pattern 只认头部', input: HOOK('s29', '分析文本，先给结论。\n\n正文提到 timeout 是正常讨论，不应命中头部窗外。'), want: c => c.decision === undefined, config: { retryableErrorPatterns: 'timeout' } },
+  { name: 'T30 clean 轮重置续跑配额', input: HOOK('s30', '任务完成，全部测试通过。'), want: c => c.decision === undefined && c.additionalContext === undefined, presetState: { count: 2, lastAt: Date.now() - 5000, lastText: 'x' } },
+  { name: 'T31 抱歉体错误(硬前缀)→续跑', input: HOOK('s31', '抱歉，本轮任务未能完成。\n原因：请求超时（timeout），重试后仍失败。'), want: c => c.decision === 'block' && c.reason && c.reason.length > 0 },
 ];
 
 let pass = 0, fail = 0;
