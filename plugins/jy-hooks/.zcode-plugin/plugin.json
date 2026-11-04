@@ -1,0 +1,8 @@
+{
+  "name": "jy-hooks",
+  "version": "0.1.0",
+  "description": "Personal governance hook pack: RTK command-rewrite adapter, CJK commit guard, rule-surface observe probe, and JEV advisory on decision-file writes. All fail-open.",
+  "author": {
+    "name": "jinyue806"
+  }
+}

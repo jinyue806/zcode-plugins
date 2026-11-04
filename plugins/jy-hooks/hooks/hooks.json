@@ -1,0 +1,51 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "process",
+            "command": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+            "args": ["-NoProfile", "-File", "${ZCODE_PLUGIN_ROOT}\\hooks\\cand-rule-probe.ps1"],
+            "timeoutMs": 3000,
+            "statusMessage": "cand-rule-probe (observe-only)"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "process",
+            "command": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+            "args": ["-NoProfile", "-File", "${ZCODE_PLUGIN_ROOT}\\hooks\\rtk-enforce.ps1"],
+            "timeoutMs": 5000,
+            "statusMessage": "RTK enforce"
+          },
+          {
+            "type": "process",
+            "command": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+            "args": ["-NoProfile", "-File", "${ZCODE_PLUGIN_ROOT}\\hooks\\commit-guard.ps1"],
+            "timeoutMs": 3000,
+            "statusMessage": "commit-guard (CJK -m block)"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "process",
+            "command": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+            "args": ["-NoProfile", "-File", "${ZCODE_PLUGIN_ROOT}\\hooks\\jev-advisory.ps1"],
+            "timeoutMs": 12000,
+            "statusMessage": "JEV advisory"
+          }
+        ]
+      }
+    ]
+  }
+}

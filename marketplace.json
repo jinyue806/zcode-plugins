@@ -54,6 +54,21 @@
         "ops",
         "crlf-safe"
       ]
+    },
+    {
+      "name": "jy-hooks",
+      "source": "./plugins/jy-hooks",
+      "displayName": "JY Hooks",
+      "description": "Personal governance hook pack: RTK command-rewrite adapter, CJK commit guard, rule-surface observe probe, JEV advisory on decision-file writes. All fail-open.",
+      "description_i18n": {
+        "en": "Personal governance hook pack: RTK command-rewrite adapter, CJK commit guard, rule-surface observe probe, JEV advisory on decision-file writes. All fail-open.",
+        "zh-CN": "个人治理钩子包：RTK 命令改写适配、中文 commit -m 拦截、规则面写入观察探针、决策文件 JEV 提示。全部 fail-open。"
+      },
+      "version": "0.1.0",
+      "author": {
+        "name": "jinyue806"
+      },
+      "homepage": "https://github.com/jinyue806/zcode-plugins"
     }
   ]
 }
