@@ -92,6 +92,24 @@ const ERROR_SIGNATURES = [
   /网络/, /连接中断/, /请求失败/, /重试后仍失败/
 ];
 
+// P0（2026-11-04）：文本嗅探双向失灵的修正 —— 分析错误机制的文本天然命中签名造成误续（实证 2 次）。
+// ① 结尾是问句/提案（agent 在等用户拍板）→ 绝不续；② 错误签名只认文本头部区域（harness 注入的错误在头部，分析文本的签名散布全文）。
+// 词边界版问句豁免：行尾（允许尾随空白/引号/括号）以疑问标点或「吗/呢/吧+？」收尾
+const QUESTION_TAIL = /([?？]\s*['"）)】\]]*|(吗|呢|吧)[?？]?)\s*$/;
+
+function endsWithQuestion(text) {
+  const t = String(text || '').trimEnd();
+  if (!t) return false;
+  return QUESTION_TAIL.test(t);
+}
+
+// 签名命中位置约束：只认首行（harness 注入的错误自成一行；分析文本把签名写进正文段落）
+function headRegion(text) {
+  const t = String(text || '');
+  const firstNl = t.indexOf('\n');
+  return firstNl === -1 ? t : t.slice(0, firstNl);
+}
+
 function classify(text, cfg) {
   const hay = String(text || '');
   const has = (patterns) => patterns.split(/\r?\n/).map(s => s.trim()).filter(Boolean).some(p => hay.toLowerCase().includes(p.toLowerCase()));
@@ -99,8 +117,13 @@ function classify(text, cfg) {
   // 用户显式永久 pattern 优先——命中绝不续
   if (has(cfg.permanentErrorPatterns)) return 'permanent';
 
+  // P0-①：问句/提案结尾 = 等用户拍板，绝不续（无论中间命中什么签名）
+  if (endsWithQuestion(hay)) return 'clean';
+
   // 无 error 签名 = 正常完成 → 放行（这是修正后的核心判据）
-  const hasErrorSig = ERROR_SIGNATURES.some(re => re.test(hay)) || has(cfg.retryableErrorPatterns);
+  // P0-②：签名只认头部区域，正文散布的技术词不误伤
+  const head = headRegion(hay);
+  const hasErrorSig = ERROR_SIGNATURES.some(re => re.test(head)) || has(cfg.retryableErrorPatterns);
   if (!hasErrorSig) return 'clean';
 
   // 命中 error 签名后再分永久/临时：认证/余额/上下文类重试无意义

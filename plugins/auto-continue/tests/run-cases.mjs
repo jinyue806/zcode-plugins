@@ -31,6 +31,11 @@ const CASES = [
   { name: 'T15 续跑轮正常推进→再续', input: HOOK('s15', 'fetch failed 502', true), want: c => c.decision === 'block' && c.reason && c.reason.length > 0, presetState: { count: 1, lastAt: Date.now() - 5000, lastText: '别的错误' } },
   // T16 专测 config 分层：DATA_DIR 用户配置覆盖出厂 config.json
   { name: 'T16 用户配置覆盖出厂(config 分层)', input: HOOK('s16', 'fetch failed 502'), want: c => c.decision === 'block' && /USER-OVERRIDE/.test(c.reason), presetUserConfig: { continueText: 'USER-OVERRIDE-续跑' } },
+  // T17-T20 P0 修正（2026-11-04）：问句豁免 + 签名位置约束
+  { name: 'T17 错误分析+问句结尾→不续', input: HOOK('s17', '断流根因是 timeout 和 ECONNRESET，429 也会触发。要我落地 P0 补丁吗？'), want: c => c.decision === undefined && c.additionalContext === undefined },
+  { name: 'T18 长分析文本签名散布正文→不续', input: HOOK('s18', '结论如下。\n\n' + '错误机制分析：error、failed、timeout、ECONNRESET、429、5xx、网络中断、重试后仍失败。'.repeat(5)), want: c => c.decision === undefined && c.additionalContext === undefined },
+  { name: 'T19 头部真实错误→仍续跑', input: HOOK('s19', 'Error: fetch failed: socket hang up\n（后续为正常分析文本）' + '已完成排查，共修改 3 个文件。'.repeat(10)), want: c => c.decision === 'block' && c.reason && c.reason.length > 0 },
+  { name: 'T20 英文问句结尾→不续', input: HOOK('s20', 'The failure was caused by timeout and error 502. Should I proceed with the patch?'), want: c => c.decision === undefined && c.additionalContext === undefined },
 ];
 
 let pass = 0, fail = 0;
